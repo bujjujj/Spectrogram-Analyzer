@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Music Tagger</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Tailwind Configuration for Custom Colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'wooden-dark': '#3D2B1F',      /* Bistre */
+                        'wooden-light': '#FDF6E3',     /* Soft Beige for content box */
+                        'wooden-bg': '#DEB887',        /* Burlywood for background */
+                        'sage-green': '#8A9A5B',
+                        'sage-green-dark': '#556B2F'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Define a custom class for the background pattern */
+        .pattern-bg {
+            /* Wood grain texture */
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3e%3cg fill='none' stroke='%233D2B1F' stroke-opacity='0.1' stroke-width='2'%3e%3cpath d='M0 40 q20 -20 40 0 t40 0'/%3e%3cpath d='M0 80 q20 -20 40 0 t40 0'/%3e%3cpath d='M0 0 q20 20 40 0 t40 0'/%3e%3c/g%3e%3c/svg%3e");
+        }
+    </style>
+</head>
+
+<body class="bg-wooden-bg text-wooden-dark pattern-bg" style="font-family: 'Quicksand', sans-serif;">
+
+    <div class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div id="upload-box" class="w-full max-w-2xl bg-wooden-light/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-wooden-dark/10 text-center">
+            
+            <div class="mb-6">
+                <h1 class="text-4xl md:text-5xl font-bold text-wooden-dark tracking-tight leading-tight">
+                    ai music tagger
+                </h1>
+                <p class="text-wooden-dark/70 mt-2">upload your audio file to discover its tags!</p>
+            </div>
+
+            <form id="upload-form" class="space-y-6">
+                <div class="flex flex-col items-center justify-center w-full">
+                    <label for="audio-file-input" class="w-full max-w-xs text-lg font-semibold text-wooden-dark mb-2 cursor-pointer">
+                        choose audio file (.mp3)
+                    </label>
+                    <div class="relative w-full max-w-xs">
+                         <input type="file" id="audio-file-input" name="audio_file" accept=".mp3" class="hidden">
+                         <button type="button" id="custom-file-button" class="w-full bg-sage-green text-white font-bold py-3 px-4 rounded-lg hover:bg-sage-green-dark transition-all duration-300 transform hover:scale-[1.02] shadow-md">
+                            choose file
+                         </button>
+                    </div>
+                    <span id="file-name" class="text-sm text-wooden-dark/60 mt-4 h-5">no file chosen</span>
+                </div>
+
+                <button type="submit" class="w-full max-w-xs bg-sage-green text-white font-bold py-3 px-4 rounded-lg hover:bg-sage-green-dark transition-all duration-300 transform hover:scale-[1.02] shadow-lg">
+                    analyze music
+                </button>
+            </form>
+
+            <div id="loading-spinner" class="hidden text-center">
+                <svg class="animate-spin h-10 w-10 text-sage-green-dark mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-4 text-wooden-dark/80">analyzing... this may take a moment.</p>
+            </div>
+
+            <div id="results-area" class="hidden mt-6 text-left">
+                <h2 class="text-2xl font-bold text-center mb-4">predicted tags:</h2>
+                <div id="tags-container" class="flex flex-wrap justify-center gap-2">
+                    <!-- Tags will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+        <footer class="text-center mt-8 text-wooden-dark/50 text-sm">
+            <p>powered by tensorflow & flask</p>
+            <p>trained on the MagnaTagATune dataset</p>
+        </footer>
+    </div>
+    
+    <!-- Smiley Face in the corner -->
+    <div class="fixed bottom-4 right-4 text-wooden-dark/70 text-3xl">
+        😊🎶
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('audio-file-input');
+        const customFileButton = document.getElementById('custom-file-button');
+        const fileNameDisplay = document.getElementById('file-name');
+        const uploadBox = document.getElementById('upload-box');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const resultsArea = document.getElementById('results-area');
+        const tagsContainer = document.getElementById('tags-container');
+
+        // Link custom button to the real file input
+        customFileButton.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Update the file name display when a file is chosen
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = fileInput.files[0].name;
+            } else {
+                fileNameDisplay.textContent = 'no file chosen';
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (fileInput.files.length === 0) {
+                alert('please choose an audio file first.');
+                return;
+            }
+
+            // Hide form and show spinner
+            form.classList.add('hidden');
+            resultsArea.classList.add('hidden');
+            loadingSpinner.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('audio_file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                displayTags(data.tags);
+
+            } catch (error) {
+                console.error('Error during analysis:', error);
+                displayError('an error occurred during analysis. please try again.');
+            } finally {
+                // Hide spinner and show results
+                loadingSpinner.classList.add('hidden');
+                resultsArea.classList.remove('hidden');
+                // Optionally show the form again
+                 form.classList.remove('hidden');
+                 fileNameDisplay.textContent = 'no file chosen';
+                 form.reset();
+            }
+        });
+
+        function displayTags(tags) {
+            tagsContainer.innerHTML = ''; // Clear previous results
+            if (tags && tags.length > 0) {
+                tags.forEach(tagInfo => {
+                    const tagElement = document.createElement('div');
+                    // Note: The tag name itself is not lowercased to preserve the data
+                    tagElement.className = 'bg-sage-green text-white text-sm font-semibold px-4 py-2 rounded-full shadow-sm';
+                    tagElement.innerHTML = `${tagInfo.tag} <span class="text-white/70 text-xs">${tagInfo.confidence}</span>`;
+                    tagsContainer.appendChild(tagElement);
+                });
+            } else {
+                tagsContainer.innerHTML = '<p class="text-wooden-dark/70">no confident tags were found for this track.</p>';
+            }
+        }
+
+        function displayError(message) {
+            tagsContainer.innerHTML = '';
+            const errorElement = document.createElement('p');
+            errorElement.className = 'text-red-500 text-center';
+            errorElement.textContent = message;
+            tagsContainer.appendChild(errorElement);
+        }
+    </script>
+
+</body>
+
+</html>
+

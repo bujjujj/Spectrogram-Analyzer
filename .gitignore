@@ -1,0 +1,21 @@
+#Ignore big data folders
+data/
+spectrograms/
+
+#Ignore saved models, as they can be large binary files.
+*.keras
+*.h5
+
+#Python specific
+pycache/
+*.pyc
+venv/
+.venv/
+env/
+
+#Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+#IDE/Editor specific folders
+.vscode/
+.idea/
