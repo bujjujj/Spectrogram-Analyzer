@@ -94,7 +94,7 @@ def index():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    print(f"Received request.files: {request.files}")
+    #print(f"Received request.files: {request.files}")
 
     if 'audio_file' not in request.files or request.files['audio_file'].filename == '':
         print("!!! ERROR: No file part or no selected file.")
